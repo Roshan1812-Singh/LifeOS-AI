@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -58,20 +59,20 @@ public class GlobalExceptionHandler {
                         "Access denied", req.getRequestURI()));
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex,
+                                                          HttpServletRequest req) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), "Bad Request",
+                        "Malformed or unreadable request body", req.getRequestURI()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest req) {
         log.error("Unhandled exception on {}", req.getRequestURI(), ex);
-        // TEMPORARY DIAGNOSTIC: surface the root cause so production failures can
-        // be diagnosed without log access. Revert to a generic message afterwards.
-        Throwable root = ex;
-        while (root.getCause() != null && root.getCause() != root) {
-            root = root.getCause();
-        }
-        String detail = ex.getClass().getSimpleName() + ": " + ex.getMessage()
-                + " | root=" + root.getClass().getName() + ": " + root.getMessage();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        "Internal Server Error", detail, req.getRequestURI()));
+                        "Internal Server Error", "An unexpected error occurred", req.getRequestURI()));
     }
 
     private ErrorResponse.FieldError toFieldError(FieldError fe) {
