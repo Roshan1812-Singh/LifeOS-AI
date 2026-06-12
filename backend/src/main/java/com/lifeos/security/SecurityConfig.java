@@ -102,7 +102,9 @@ public class SecurityConfig {
                 .map(String::strip)
                 .map(origin -> origin.endsWith("/") ? origin.substring(0, origin.length() - 1) : origin)
                 .toList();
-        configuration.setAllowedOrigins(allowedOrigins);
+        // Use patterns (not exact origins) so wildcard hosts like https://*.vercel.app
+        // are supported alongside credentials.
+        configuration.setAllowedOriginPatterns(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));

@@ -31,6 +31,11 @@ lifeos:
   ai:
     # Without an API key the AI features return an honest 503 (never fabricated).
     api-key: ${OPENAI_API_KEY:}
+  security:
+    cors:
+      # Default to the deployed Vercel frontend (and its preview URLs) so the app
+      # works out of the box. Override with CORS_ALLOWED_ORIGINS if the domain changes.
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:https://life-os-ai-eta.vercel.app,https://*.vercel.app}
 
 # Disable the public Swagger UI in production by default (API docs JSON stays
 # available for tooling). Set SWAGGER_UI_ENABLED=true to re-enable.
