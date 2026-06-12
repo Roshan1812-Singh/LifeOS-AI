@@ -6,7 +6,11 @@ import axios, {
 import { useAuthStore } from "@/store/authStore";
 import type { ApiErrorBody, AuthResponse } from "@/types";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+// Always talk to the same origin's "/api". In dev, Vite proxies it to the local
+// backend (see vite.config.ts); in production, Vercel proxies it to the Render
+// backend (see vercel.json). This keeps the browser same-origin, so there is no
+// CORS surface and no absolute backend URL baked into the bundle.
+const baseURL = "/api";
 
 export const api = axios.create({
   baseURL,
