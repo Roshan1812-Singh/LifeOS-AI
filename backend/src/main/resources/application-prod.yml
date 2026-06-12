@@ -38,6 +38,13 @@ springdoc:
   swagger-ui:
     enabled: ${SWAGGER_UI_ENABLED:false}
 
+# Redis is not used by the app (only the health indicator probes it). Disable it
+# so /actuator/health stays UP without a Redis instance and the deploy succeeds.
+management:
+  health:
+    redis:
+      enabled: false
+
 logging:
   level:
     root: WARN
