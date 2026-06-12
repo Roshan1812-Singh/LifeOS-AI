@@ -61,9 +61,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest req) {
         log.error("Unhandled exception on {}", req.getRequestURI(), ex);
+        // TEMPORARY DIAGNOSTIC: surface the root cause so production failures can
+        // be diagnosed without log access. Revert to a generic message afterwards.
+        Throwable root = ex;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String detail = ex.getClass().getSimpleName() + ": " + ex.getMessage()
+                + " | root=" + root.getClass().getName() + ": " + root.getMessage();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        "Internal Server Error", "An unexpected error occurred", req.getRequestURI()));
+                        "Internal Server Error", detail, req.getRequestURI()));
     }
 
     private ErrorResponse.FieldError toFieldError(FieldError fe) {
