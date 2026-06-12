@@ -1,0 +1,102 @@
+# ============================================================
+# LifeOS AI - Render Blueprint (Infrastructure as Code)
+# Docs: https://render.com/docs/infrastructure-as-code
+#
+# Creates: Postgres + Key Value (Redis) + backend (Docker) + frontend (static).
+# After the first deploy, set the three `sync: false` values in the dashboard
+# (they depend on the generated .onrender.com URLs) and redeploy. See
+# docs/DEPLOY-RENDER.md for the exact click-by-click runbook.
+# ============================================================
+databases:
+  - name: lifeos-postgres
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  # ---- Redis-compatible cache ----
+  - type: keyvalue
+    name: lifeos-redis
+    plan: free
+    ipAllowList: [] # internal access only
+
+  # ---- Spring Boot backend (built from backend/Dockerfile) ----
+  - type: web
+    name: lifeos-backend
+    runtime: docker
+    plan: free # NOTE: 512MB RAM; upgrade to "starter" if the JVM OOMs.
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # Bind the JVM to Render's port (application.yml reads ${PORT}).
+      - key: PORT
+        value: "8080"
+      # Keep the JVM within the free instance's memory budget.
+      - key: JAVA_OPTS
+        value: "-XX:MaxRAMPercentage=65.0 -XX:+UseG1GC -Xss512k"
+      # --- Postgres (injected from the managed database) ---
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: lifeos-postgres
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: lifeos-postgres
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: lifeos-postgres
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: lifeos-postgres
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: lifeos-postgres
+          property: password
+      # --- Redis / Key Value (injected from the service) ---
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: lifeos-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: lifeos-redis
+          property: port
+      # --- Secrets / app config ---
+      - key: JWT_SECRET
+        generateValue: true # Render generates a strong random secret
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false # set to the frontend URL, e.g. https://lifeos-frontend.onrender.com
+      - key: OPENAI_API_KEY
+        sync: false # paste your Groq key (gsk_...) in the dashboard
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: AI_MODEL
+        value: llama-3.3-70b-versatile
+      - key: STORAGE_PROVIDER
+        value: local # NOTE: ephemeral on Render; use S3 for durable uploads
+
+  # ---- React web app (static site built by Vite) ----
+  - type: web
+    runtime: static
+    name: lifeos-frontend
+    rootDir: frontend
+    buildCommand: npm ci --include=dev && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Absolute backend API URL baked in at build time.
+      - key: VITE_API_BASE_URL
+        sync: false # set to https://lifeos-backend.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

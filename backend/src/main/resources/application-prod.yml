@@ -1,0 +1,46 @@
+# ============================================================
+# Production profile (SPRING_PROFILES_ACTIVE=prod)
+# All secrets/connection details come from environment variables.
+# ============================================================
+spring:
+  jpa:
+    hibernate:
+      # Never auto-generate schema in production; Flyway owns the schema.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN:5}
+      connection-timeout: 30000
+
+server:
+  # Behind a reverse proxy / load balancer: honour X-Forwarded-* headers.
+  forward-headers-strategy: framework
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+    include-exception: false
+  shutdown: graceful
+
+lifeos:
+  ai:
+    # Without an API key the AI features return an honest 503 (never fabricated).
+    api-key: ${OPENAI_API_KEY:}
+
+# Disable the public Swagger UI in production by default (API docs JSON stays
+# available for tooling). Set SWAGGER_UI_ENABLED=true to re-enable.
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_UI_ENABLED:false}
+
+logging:
+  level:
+    root: WARN
+    com.lifeos: ${LOG_LEVEL:INFO}
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN

@@ -1,0 +1,52 @@
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Secrets / env ----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ---- Java / Maven (backend) ----
+backend/target/
+backend/data/
+backend/.mvn/
+!backend/.mvn/wrapper/maven-wrapper.properties
+*.class
+*.log
+hs_err_pid*
+
+# ---- Node (frontend) ----
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# ---- Mobile (Expo / React Native) ----
+mobile/.expo/
+mobile/dist/
+mobile/dist-check/
+mobile/web-build/
+*.apk
+*.aab
+
+# ---- Build artifacts ----
+dist/
+build/
+out/
+
+# ---- Local run logs / scripts output ----
+run-backend.log
+run-frontend.log

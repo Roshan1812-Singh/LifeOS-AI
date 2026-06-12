@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "LifeOS AI",
+    "slug": "lifeos-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "lifeosai",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lifeos.ai",
+      "infoPlist": {
+        "NSCameraUsageDescription": "LifeOS AI uses the camera to scan and upload your documents.",
+        "NSPhotoLibraryUsageDescription": "LifeOS AI accesses your photos to upload documents.",
+        "NSLocationWhenInUseUsageDescription": "LifeOS AI uses your location to attach places to reminders.",
+        "NSMicrophoneUsageDescription": "LifeOS AI uses the microphone for voice input."
+      }
+    },
+    "android": {
+      "package": "com.lifeos.ai",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "LifeOS AI uses the camera to scan and upload your documents.",
+          "photosPermission": "LifeOS AI accesses your photos to upload documents."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "LifeOS AI uses your location to attach places to reminders."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#4f46e5"
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}
