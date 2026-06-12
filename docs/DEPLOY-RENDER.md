@@ -23,21 +23,29 @@ git push -u origin main
 
 ---
 
-## Part B — Deploy on Render (web + API + DB + cache)
+## Part B — Deploy the backend on Render (API + DB + cache)
 
-The repo includes a **Blueprint** (`render.yaml`) that provisions everything.
+The repo includes a **Blueprint** (`render.yaml`) that provisions the backend stack. The **frontend goes on Vercel** (Part B2).
 
 1. Sign up / log in at <https://render.com> (free; GitHub login).
-2. **Dashboard → New → Blueprint**, connect your GitHub account, pick the `lifeos-ai` repo. Render reads `render.yaml` and shows: `lifeos-postgres`, `lifeos-redis`, `lifeos-backend`, `lifeos-frontend`.
-3. Click **Apply**. Render builds the backend Docker image and the static frontend. First build takes a few minutes.
-4. When the services exist, set the three values the Blueprint left as "set in dashboard":
-   - **lifeos-backend → Environment**:
-     - `OPENAI_API_KEY` = your Groq key (`gsk_...`)
-     - `CORS_ALLOWED_ORIGINS` = your frontend URL, e.g. `https://lifeos-frontend.onrender.com`
-   - **lifeos-frontend → Environment**:
-     - `VITE_API_BASE_URL` = your backend URL + `/api`, e.g. `https://lifeos-backend.onrender.com/api`
-5. **Manual Deploy → Deploy latest commit** on both `lifeos-backend` and `lifeos-frontend` so the new values take effect.
-6. Open the frontend URL — your app is live on the internet. Verify backend health at `https://lifeos-backend.onrender.com/actuator/health` → `{"status":"UP"}`.
+2. **Dashboard → New → Blueprint**, connect your GitHub account, pick the `LifeOS-AI` repo. Render reads `render.yaml` and shows: `lifeos-postgres`, `lifeos-redis`, `lifeos-backend`.
+3. Click **Apply**. Render builds the backend Docker image. First build takes a few minutes.
+4. When the service exists, set the two values the Blueprint left as "set in dashboard" under **lifeos-backend → Environment**:
+   - `OPENAI_API_KEY` = your Groq key (`gsk_...`)
+   - `CORS_ALLOWED_ORIGINS` = your Vercel frontend URL, e.g. `https://life-os-ai.vercel.app`
+5. **Manual Deploy → Deploy latest commit** on `lifeos-backend` so the new values take effect.
+6. Verify backend health at `https://lifeos-backend.onrender.com/actuator/health` → `{"status":"UP"}`. Note this backend URL — you need it for Vercel and the APK.
+
+## Part B2 — Deploy the frontend on Vercel
+
+`frontend/vercel.json` configures the Vite build + SPA routing.
+
+1. Log in at <https://vercel.com> → **Add New → Project** → import the `LifeOS-AI` repo.
+2. Set **Root Directory** to `frontend` (Vercel will detect Vite, build `npm run build`, output `dist`).
+3. Under **Environment Variables**, add:
+   - `VITE_API_BASE_URL` = your Render backend URL + `/api`, e.g. `https://lifeos-backend.onrender.com/api`
+4. **Deploy**. Copy the resulting URL (e.g. `https://life-os-ai.vercel.app`) and make sure it matches `CORS_ALLOWED_ORIGINS` on Render (step B4); update + redeploy the backend if needed.
+5. Open the Vercel URL — register/log in; the AI chat responds via your Groq key.
 
 ### Free-tier caveats (important)
 - **Free web services sleep** after ~15 min idle; the first request afterward is slow (cold start).

@@ -2,10 +2,10 @@
 # LifeOS AI - Render Blueprint (Infrastructure as Code)
 # Docs: https://render.com/docs/infrastructure-as-code
 #
-# Creates: Postgres + Key Value (Redis) + backend (Docker) + frontend (static).
-# After the first deploy, set the three `sync: false` values in the dashboard
-# (they depend on the generated .onrender.com URLs) and redeploy. See
-# docs/DEPLOY-RENDER.md for the exact click-by-click runbook.
+# Creates: Postgres + Key Value (Redis) + backend (Docker).
+# The React frontend is hosted on Vercel (see frontend/vercel.json), NOT here.
+# After the first deploy, set the two `sync: false` values (OPENAI_API_KEY and
+# CORS_ALLOWED_ORIGINS) in the dashboard and redeploy. See docs/DEPLOY-RENDER.md.
 # ============================================================
 databases:
   - name: lifeos-postgres
@@ -73,7 +73,7 @@ services:
       - key: JWT_SECRET
         generateValue: true # Render generates a strong random secret
       - key: CORS_ALLOWED_ORIGINS
-        sync: false # set to the frontend URL, e.g. https://lifeos-frontend.onrender.com
+        sync: false # set to your Vercel frontend URL, e.g. https://life-os-ai.vercel.app
       - key: OPENAI_API_KEY
         sync: false # paste your Groq key (gsk_...) in the dashboard
       - key: AI_PROVIDER
@@ -84,19 +84,4 @@ services:
         value: llama-3.3-70b-versatile
       - key: STORAGE_PROVIDER
         value: local # NOTE: ephemeral on Render; use S3 for durable uploads
-
-  # ---- React web app (static site built by Vite) ----
-  - type: web
-    runtime: static
-    name: lifeos-frontend
-    rootDir: frontend
-    buildCommand: npm ci --include=dev && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      # Absolute backend API URL baked in at build time.
-      - key: VITE_API_BASE_URL
-        sync: false # set to https://lifeos-backend.onrender.com/api
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+# The React frontend is deployed separately on Vercel (see frontend/vercel.json).
