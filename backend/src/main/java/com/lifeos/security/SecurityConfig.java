@@ -94,7 +94,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(securityProperties.cors().allowedOrigins());
+        // Normalise configured origins: trim whitespace and drop any trailing
+        // slash, since a browser's Origin header never has one (so a value like
+        // "https://app.example.com/" would otherwise silently fail to match).
+        List<String> allowedOrigins = securityProperties.cors().allowedOrigins().stream()
+                .filter(origin -> origin != null && !origin.isBlank())
+                .map(String::strip)
+                .map(origin -> origin.endsWith("/") ? origin.substring(0, origin.length() - 1) : origin)
+                .toList();
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
