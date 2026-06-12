@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://lifeos-backend.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://lifeos-backend-l2hx.onrender.com/api"
       }
     },
     "production": {
