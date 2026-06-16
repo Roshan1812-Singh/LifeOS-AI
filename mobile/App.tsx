@@ -4,6 +4,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootNavigator } from "./src/navigation";
 import { useAuthStore } from "./src/store/authStore";
+import { useCurrencyStore } from "./src/store/currencyStore";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,10 +14,12 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
+  const hydrateCurrency = useCurrencyStore((s) => s.hydrate);
 
   useEffect(() => {
     hydrate();
-  }, [hydrate]);
+    hydrateCurrency();
+  }, [hydrate, hydrateCurrency]);
 
   return (
     <SafeAreaProvider>

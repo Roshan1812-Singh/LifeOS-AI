@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -10,7 +11,8 @@ import {
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { Badge, EmptyState } from "../components/ui";
+import { Badge, EmptyState, KeyboardAware } from "../components/ui";
+import { extractErrorMessage } from "../services/api";
 import { taskService } from "../services/tasks";
 import { colors, radius, spacing } from "../theme";
 import type { Priority, Task } from "../types";
@@ -33,6 +35,7 @@ export function TasksScreen() {
   const create = useMutation({
     mutationFn: (t: string) => taskService.create({ title: t }),
     onSuccess: invalidate,
+    onError: (e) => Alert.alert("Could not add task", extractErrorMessage(e)),
   });
   const toggle = useMutation({
     mutationFn: (task: Task) =>
@@ -52,7 +55,7 @@ export function TasksScreen() {
   };
 
   return (
-    <View style={styles.flex}>
+    <KeyboardAware style={styles.flex}>
       <View style={styles.addRow}>
         <TextInput
           style={styles.input}
@@ -107,7 +110,7 @@ export function TasksScreen() {
           }}
         />
       )}
-    </View>
+    </KeyboardAware>
   );
 }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -9,7 +9,8 @@ import { Button, Card } from "../components/ui";
 import { authService } from "../services/auth";
 import { expenseService } from "../services/expenses";
 import { useAuthStore } from "../store/authStore";
-import { registerForPushNotificationsAsync } from "../native/notifications";
+import { ensureNotificationPermission } from "../native/notifications";
+import { useCurrency } from "../store/currencyStore";
 import { colors, radius, spacing } from "../theme";
 import type { RootStackParamList, TabParamList } from "../navigation";
 
@@ -29,7 +30,8 @@ function money(value: number, currency: string) {
 export function HomeScreen({ navigation }: Props) {
   const storedUser = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-  const [pushToken, setPushToken] = useState<string | null>(null);
+  const { currency } = useCurrency();
+  const [notifyEnabled, setNotifyEnabled] = useState<boolean | null>(null);
 
   const profile = useQuery({
     queryKey: ["me"],
@@ -44,8 +46,19 @@ export function HomeScreen({ navigation }: Props) {
   const summary = useQuery({ queryKey: ["expense-summary"], queryFn: () => expenseService.summary() });
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then(setPushToken).catch(() => setPushToken(null));
+    ensureNotificationPermission().then(setNotifyEnabled).catch(() => setNotifyEnabled(false));
   }, []);
+
+  const enableNotifications = async () => {
+    const ok = await ensureNotificationPermission();
+    setNotifyEnabled(ok);
+    if (!ok) {
+      Alert.alert(
+        "Notifications are off",
+        "Allow notifications for LifeOS AI in your device Settings so your reminders can alert you on time.",
+      );
+    }
+  };
 
   const firstName = profile.data?.name?.split(" ")[0] ?? "there";
 
@@ -68,19 +81,19 @@ export function HomeScreen({ navigation }: Props) {
           <View>
             <Text style={styles.miniLabel}>Income</Text>
             <Text style={[styles.miniValue, { color: colors.income }]}>
-              {money(summary.data?.totalIncome ?? 0, summary.data?.currency ?? "USD")}
+              {money(summary.data?.totalIncome ?? 0, currency)}
             </Text>
           </View>
           <View>
             <Text style={styles.miniLabel}>Expense</Text>
             <Text style={[styles.miniValue, { color: colors.expense }]}>
-              {money(summary.data?.totalExpense ?? 0, summary.data?.currency ?? "USD")}
+              {money(summary.data?.totalExpense ?? 0, currency)}
             </Text>
           </View>
           <View>
             <Text style={styles.miniLabel}>Net</Text>
             <Text style={styles.miniValue}>
-              {money(summary.data?.net ?? 0, summary.data?.currency ?? "USD")}
+              {money(summary.data?.net ?? 0, currency)}
             </Text>
           </View>
         </View>
@@ -98,14 +111,21 @@ export function HomeScreen({ navigation }: Props) {
 
       <Card style={{ gap: spacing.sm }}>
         <View style={styles.pushRow}>
-          <Ionicons name="notifications-outline" size={20} color={colors.primary} />
-          <Text style={styles.pushTitle}>Push notifications</Text>
+          <Ionicons
+            name={notifyEnabled ? "notifications" : "notifications-off-outline"}
+            size={20}
+            color={notifyEnabled ? colors.success : colors.primary}
+          />
+          <Text style={styles.pushTitle}>Notifications</Text>
         </View>
         <Text style={styles.pushStatus}>
-          {pushToken
-            ? "Enabled on this device. Reminders can be delivered as notifications."
-            : "Not registered yet (needs a physical device and granted permission)."}
+          {notifyEnabled
+            ? "Enabled — your reminders will alert you on this device."
+            : "Turn on notifications so your reminders can alert you on time."}
         </Text>
+        {notifyEnabled === false ? (
+          <Button title="Enable notifications" onPress={enableNotifications} />
+        ) : null}
       </Card>
 
       <Button title="Log out" variant="secondary" onPress={() => useAuthStore.getState().clear()} />

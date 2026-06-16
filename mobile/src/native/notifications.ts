@@ -82,3 +82,50 @@ export async function sendImmediateNotification(title: string, body: string): Pr
     trigger: null,
   });
 }
+
+/**
+ * Cancels the pending local notification for a removed reminder so it never
+ * fires. Reminders are scheduled with the reminder's title as the body and a
+ * DATE trigger, so we match on body (and the trigger time when available).
+ */
+export async function cancelReminderNotification(reminderTitle: string, when: Date): Promise<void> {
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const targetMs = when.getTime();
+    for (const item of scheduled) {
+      if (item.content?.body !== reminderTitle) continue;
+
+      const trigger = item.trigger as { date?: number | string } | null;
+      const rawDate = trigger?.date;
+      const triggerMs =
+        rawDate == null ? null : typeof rawDate === "number" ? rawDate : new Date(rawDate).getTime();
+      const sameTime = triggerMs == null || Math.abs(triggerMs - targetMs) < 60_000;
+
+      if (sameTime) {
+        await Notifications.cancelScheduledNotificationAsync(item.identifier);
+      }
+    }
+  } catch {
+    // Best effort: if scheduled notifications can't be read, skip silently.
+  }
+}
+
+/**
+ * Ensures notification permission is granted (prompting once if needed) so that
+ * on-device reminders can fire. Returns true when notifications are allowed.
+ * This is independent of remote push tokens, which additionally require FCM.
+ */
+export async function ensureNotificationPermission(): Promise<boolean> {
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "Reminders",
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  }
+  const existing = await Notifications.getPermissionsAsync();
+  if (existing.granted) return true;
+  if (!existing.canAskAgain) return false;
+  const requested = await Notifications.requestPermissionsAsync();
+  return requested.granted;
+}

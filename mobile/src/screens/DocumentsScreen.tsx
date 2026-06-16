@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import { Badge, Button, Card, EmptyState } from "../components/ui";
+import { Badge, Button, Card, EmptyState, KeyboardAware } from "../components/ui";
 import { documentService, type UploadFile } from "../services/documents";
 import { extractErrorMessage } from "../services/api";
 import { colors, radius, spacing } from "../theme";
@@ -21,7 +21,19 @@ import type { AskResponse } from "../types";
 
 function fileNameFromUri(uri: string, fallback: string) {
   const last = uri.split("/").pop();
-  return last && last.includes(".") ? last : fallback;
+  return last && last.includes(".") ? decodeText(last) : fallback;
+}
+
+// File names and document titles can arrive percent-encoded (e.g. a picked file
+// "fee receipt 6th sem.pdf" becomes "fee%20receipt%206th%20sem"). Decode them so
+// the UI shows real spaces instead of "%20" in titles, answers and sources.
+function decodeText(value: string): string {
+  if (!value) return value;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value.replace(/%20/g, " ");
+  }
 }
 
 export function DocumentsScreen() {
@@ -59,7 +71,7 @@ export function DocumentsScreen() {
     const asset = result.assets[0];
     upload.mutate({
       uri: asset.uri,
-      name: asset.fileName ?? fileNameFromUri(asset.uri, `scan-${Date.now()}.jpg`),
+      name: decodeText(asset.fileName ?? fileNameFromUri(asset.uri, `scan-${Date.now()}.jpg`)),
       mimeType: asset.mimeType ?? "image/jpeg",
     });
   };
@@ -70,7 +82,7 @@ export function DocumentsScreen() {
     const asset = result.assets[0];
     upload.mutate({
       uri: asset.uri,
-      name: asset.name ?? fileNameFromUri(asset.uri, `file-${Date.now()}`),
+      name: decodeText(asset.name ?? fileNameFromUri(asset.uri, `file-${Date.now()}`)),
       mimeType: asset.mimeType,
     });
   };
@@ -83,11 +95,13 @@ export function DocumentsScreen() {
   };
 
   return (
-    <FlatList
-      style={styles.flex}
-      data={docs.data ?? []}
-      keyExtractor={(d) => d.id}
-      contentContainerStyle={styles.container}
+    <KeyboardAware>
+      <FlatList
+        style={styles.flex}
+        data={docs.data ?? []}
+        keyExtractor={(d) => d.id}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.container}
       ListHeaderComponent={
         <View style={{ gap: spacing.lg }}>
           <View style={styles.actions}>
@@ -107,11 +121,11 @@ export function DocumentsScreen() {
             <Button title="Ask" onPress={submitAsk} loading={ask.isPending} disabled={!question.trim()} />
             {answer ? (
               <View style={styles.answer}>
-                <Text style={styles.answerText}>{answer.answer}</Text>
+                <Text style={styles.answerText}>{decodeText(answer.answer)}</Text>
                 {answer.sources.length > 0 ? (
                   <View style={styles.sources}>
                     {answer.sources.map((s) => (
-                      <Badge key={s.id} text={s.title} />
+                      <Badge key={s.id} text={decodeText(s.title)} />
                     ))}
                   </View>
                 ) : null}
@@ -134,7 +148,7 @@ export function DocumentsScreen() {
           <Ionicons name="document-text-outline" size={22} color={colors.primary} />
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={styles.docTitle} numberOfLines={1}>
-              {item.title}
+              {decodeText(item.title)}
             </Text>
             <View style={styles.metaRow}>
               <Badge text={label(item.category)} />
@@ -148,7 +162,8 @@ export function DocumentsScreen() {
           </Pressable>
         </View>
       )}
-    />
+      />
+    </KeyboardAware>
   );
 }
 

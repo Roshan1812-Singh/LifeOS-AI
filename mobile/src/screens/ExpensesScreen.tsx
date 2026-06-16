@@ -10,9 +10,10 @@ import {
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { Button, Card } from "../components/ui";
+import { Button, Card, KeyboardAware } from "../components/ui";
 import { expenseService } from "../services/expenses";
 import { extractErrorMessage } from "../services/api";
+import { CURRENCIES, useCurrency } from "../store/currencyStore";
 import { colors, radius, spacing } from "../theme";
 import type { ExpenseCategory, ExpenseType } from "../types";
 
@@ -50,8 +51,8 @@ export function ExpensesScreen() {
   const [note, setNote] = useState("");
   const [insight, setInsight] = useState<string | null>(null);
 
+  const { currency, setCurrency } = useCurrency();
   const summary = useQuery({ queryKey: ["expense-summary"], queryFn: () => expenseService.summary() });
-  const currency = summary.data?.currency ?? "USD";
   const categories = type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["expense-summary"] });
@@ -90,7 +91,23 @@ export function ExpensesScreen() {
   };
 
   return (
-    <ScrollView style={styles.flex} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAware>
+      <ScrollView style={styles.flex} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.currencyRow}>
+        <Text style={styles.currencyLabel}>Currency</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {CURRENCIES.map((c) => (
+            <Pressable
+              key={c.code}
+              style={[styles.chip, currency === c.code && styles.chipActive]}
+              onPress={() => setCurrency(c.code)}
+            >
+              <Text style={[styles.chipText, currency === c.code && styles.chipTextActive]}>{c.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
       <View style={styles.summaryRow}>
         <Card style={styles.summaryCard}>
           <Text style={styles.summaryLabel}>Income</Text>
@@ -190,13 +207,16 @@ export function ExpensesScreen() {
           <Text style={styles.insightText}>{insight}</Text>
         </Card>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAware>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   container: { padding: spacing.lg, gap: spacing.lg },
+  currencyRow: { gap: spacing.sm },
+  currencyLabel: { color: colors.muted, fontSize: 13, fontWeight: "600" },
   summaryRow: { flexDirection: "row", gap: spacing.md },
   summaryCard: { flex: 1, gap: spacing.xs },
   summaryLabel: { color: colors.muted, fontSize: 13 },

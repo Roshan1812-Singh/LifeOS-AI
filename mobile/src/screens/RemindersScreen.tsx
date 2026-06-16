@@ -13,10 +13,11 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { Button, Card, EmptyState } from "../components/ui";
+import { Button, Card, EmptyState, KeyboardAware } from "../components/ui";
 import { reminderService, type ReminderPayload } from "../services/reminders";
 import { extractErrorMessage } from "../services/api";
-import { scheduleReminderNotification } from "../native/notifications";
+import { cancelReminderNotification, scheduleReminderNotification } from "../native/notifications";
+import type { Reminder } from "../types";
 import { colors, radius, spacing } from "../theme";
 
 type Offset = { label: string; ms: number };
@@ -64,17 +65,25 @@ export function RemindersScreen() {
     onError: (e) => Alert.alert("Could not create reminder", extractErrorMessage(e)),
   });
 
-  const complete = useMutation({
-    mutationFn: (id: string) => reminderService.updateStatus(id, "COMPLETED"),
+  // Removing a reminder must also cancel its pending device notification, so a
+  // deleted reminder never fires.
+  const remove = useMutation({
+    mutationFn: async (item: Reminder) => {
+      await reminderService.remove(item.id);
+      await cancelReminderNotification(item.title, new Date(item.remindAt));
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["reminders"] }),
+    onError: (e) => Alert.alert("Could not remove reminder", extractErrorMessage(e)),
   });
 
   return (
-    <FlatList
-      style={styles.flex}
-      data={reminders.data ?? []}
-      keyExtractor={(r) => r.id}
-      contentContainerStyle={styles.container}
+    <KeyboardAware>
+      <FlatList
+        style={styles.flex}
+        data={reminders.data ?? []}
+        keyExtractor={(r) => r.id}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.container}
       ListHeaderComponent={
         <Card style={{ gap: spacing.md, marginBottom: spacing.lg }}>
           <Text style={styles.cardTitle}>New reminder</Text>
@@ -122,9 +131,6 @@ export function RemindersScreen() {
       }
       renderItem={({ item }) => (
         <View style={styles.row}>
-          <Pressable onPress={() => complete.mutate(item.id)} hitSlop={8}>
-            <Ionicons name="ellipse-outline" size={24} color={colors.muted} />
-          </Pressable>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.muted}>
@@ -132,9 +138,18 @@ export function RemindersScreen() {
               {item.locationLabel ? `  ·  ${item.locationLabel}` : ""}
             </Text>
           </View>
+          <Pressable
+            onPress={() => remove.mutate(item)}
+            hitSlop={8}
+            disabled={remove.isPending}
+            accessibilityLabel="Remove reminder"
+          >
+            <Ionicons name="close-circle" size={24} color={colors.danger} />
+          </Pressable>
         </View>
       )}
-    />
+      />
+    </KeyboardAware>
   );
 }
 

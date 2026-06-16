@@ -12,9 +12,13 @@ import com.lifeos.task.dto.UpdateTaskRequest;
 import com.lifeos.task.repository.TaskRepository;
 import com.lifeos.user.User;
 import com.lifeos.user.UserService;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,8 +39,35 @@ public class TaskService {
     @Transactional(readOnly = true)
     public List<TaskResponse> list(User user, TaskStatus status, String search) {
         User managed = userService.reference(user);
-        String term = (search != null && !search.isBlank()) ? search.trim() : null;
-        return taskRepository.search(managed, status, term).stream()
+        String term = (search != null && !search.isBlank()) ? search.trim().toLowerCase() : null;
+
+        // Fast path with no filters (the common case) avoids the criteria build.
+        if (status == null && term == null) {
+            return taskRepository.findTopLevel(managed).stream()
+                    .map(this::toResponseWithSubtasks)
+                    .toList();
+        }
+
+        // Build only the predicates we actually need so no NULL parameter is ever
+        // bound (which PostgreSQL cannot type-infer for enum columns).
+        Specification<Task> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("user"), managed));
+            predicates.add(cb.isNull(root.get("parent")));
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            if (term != null) {
+                String like = "%" + term + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.<String>get("title")), like),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("description"), "")), like)));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Sort sort = Sort.by(Sort.Order.asc("position"), Sort.Order.desc("createdAt"));
+        return taskRepository.findAll(spec, sort).stream()
                 .map(this::toResponseWithSubtasks)
                 .toList();
     }
@@ -66,7 +97,7 @@ public class TaskService {
             task.setParent(parent);
             task.setPosition(taskRepository.findByParentOrderByPositionAscCreatedAtAsc(parent).size());
         } else {
-            task.setPosition(taskRepository.search(managed, null, null).size());
+            task.setPosition(taskRepository.findTopLevel(managed).size());
         }
         return TaskResponse.from(taskRepository.save(task));
     }

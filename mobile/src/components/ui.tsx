@@ -1,15 +1,42 @@
 import React from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  type StyleProp,
   StyleSheet,
   Text,
   TextInput,
   type TextInputProps,
   View,
   type ViewProps,
+  type ViewStyle,
 } from "react-native";
 import { colors, radius, spacing } from "../theme";
+
+/**
+ * Keeps the focused input above the on-screen keyboard. On Android the heavy
+ * lifting is done by android.softwareKeyboardLayoutMode: "pan" (app.json); on
+ * iOS we pad the view as the keyboard animates in.
+ */
+export function KeyboardAware({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <KeyboardAvoidingView
+      style={[{ flex: 1 }, style]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+      {children}
+    </KeyboardAvoidingView>
+  );
+}
 
 export function Card({ style, children, ...rest }: ViewProps) {
   return (
