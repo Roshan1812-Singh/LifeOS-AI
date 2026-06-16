@@ -15,8 +15,25 @@ interface ApiErrorBody {
 export const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 20000,
+  // Render's free tier sleeps after idle; the first request must wait for a cold
+  // start (typically 30-60s). 20s wasn't enough, so the first login on the phone
+  // failed with a "Network error". Give the server room to wake up.
+  timeout: 90000,
 });
+
+/**
+ * Wakes the (free-tier) backend as early as possible so it is warm by the time
+ * the user signs in. Fire-and-forget; failures are ignored. Hits the health
+ * endpoint which lives at the origin root, not under /api.
+ */
+export async function warmUpBackend(): Promise<void> {
+  try {
+    const origin = API_URL.replace(/\/api\/?$/, "");
+    await axios.get(`${origin}/actuator/health`, { timeout: 90000 });
+  } catch {
+    // best effort – the real request will wake it if this one didn't
+  }
+}
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().accessToken;
@@ -91,7 +108,18 @@ export function extractErrorMessage(error: unknown, fallback = "Something went w
     if (body?.fieldErrors?.length) {
       return body.fieldErrors.map((f) => f.message).join(", ");
     }
-    return body?.message ?? error.message ?? fallback;
+    if (body?.message) {
+      return body.message;
+    }
+    // No response means we never reached the server (timeout / cold start / no
+    // connectivity). Give an actionable hint instead of a raw "Network Error".
+    if (!error.response) {
+      if (error.code === "ECONNABORTED") {
+        return "The server is taking a while to wake up. Please wait a few seconds and try again.";
+      }
+      return "Can't reach the server. It may be waking up — wait a moment and try again.";
+    }
+    return error.message ?? fallback;
   }
   return fallback;
 }

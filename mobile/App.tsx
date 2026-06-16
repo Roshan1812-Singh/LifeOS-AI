@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootNavigator } from "./src/navigation";
 import { useAuthStore } from "./src/store/authStore";
 import { useCurrencyStore } from "./src/store/currencyStore";
+import { warmUpBackend } from "./src/services/api";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +20,9 @@ export default function App() {
   useEffect(() => {
     hydrate();
     hydrateCurrency();
+    // Wake the free-tier backend right away so it's warm by the time the user
+    // signs in (avoids the first-request cold-start "Network error").
+    warmUpBackend();
   }, [hydrate, hydrateCurrency]);
 
   return (
