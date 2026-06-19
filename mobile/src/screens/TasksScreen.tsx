@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Badge, EmptyState, KeyboardAware } from "../components/ui";
 import { extractErrorMessage } from "../services/api";
 import { taskService } from "../services/tasks";
+import { useT } from "../i18n";
 import { colors, radius, spacing } from "../theme";
 import type { Priority, Task } from "../types";
 
@@ -25,6 +26,7 @@ const PRIORITY_COLORS: Record<Priority, string> = {
 };
 
 export function TasksScreen() {
+  const t = useT();
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
 
@@ -35,7 +37,7 @@ export function TasksScreen() {
   const create = useMutation({
     mutationFn: (t: string) => taskService.create({ title: t }),
     onSuccess: invalidate,
-    onError: (e) => Alert.alert("Could not add task", extractErrorMessage(e)),
+    onError: (e) => Alert.alert(t("tasks.couldNotAdd"), extractErrorMessage(e)),
   });
   const toggle = useMutation({
     mutationFn: (task: Task) =>
@@ -61,7 +63,7 @@ export function TasksScreen() {
           style={styles.input}
           value={title}
           onChangeText={setTitle}
-          placeholder="Add a task..."
+          placeholder={t("tasks.placeholder")}
           placeholderTextColor={colors.muted}
           onSubmitEditing={add}
           returnKeyType="done"
@@ -82,7 +84,7 @@ export function TasksScreen() {
           data={tasks.data ?? []}
           keyExtractor={(t) => t.id}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<EmptyState title="No tasks yet. Add your first one above." />}
+          ListEmptyComponent={<EmptyState title={t("tasks.empty")} />}
           renderItem={({ item }) => {
             const done = item.status === "COMPLETED";
             return (
@@ -97,7 +99,7 @@ export function TasksScreen() {
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={[styles.title, done && styles.done]}>{item.title}</Text>
                   <Badge
-                    text={item.priority}
+                    text={t(`priority.${item.priority}`)}
                     color={PRIORITY_COLORS[item.priority]}
                     bg={`${PRIORITY_COLORS[item.priority]}22`}
                   />

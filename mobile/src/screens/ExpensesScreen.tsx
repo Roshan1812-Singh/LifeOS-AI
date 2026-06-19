@@ -14,6 +14,7 @@ import { Button, Card, KeyboardAware } from "../components/ui";
 import { expenseService } from "../services/expenses";
 import { extractErrorMessage } from "../services/api";
 import { CURRENCIES, useCurrency } from "../store/currencyStore";
+import { useT } from "../i18n";
 import { colors, radius, spacing } from "../theme";
 import type { ExpenseCategory, ExpenseType } from "../types";
 
@@ -31,10 +32,6 @@ const EXPENSE_CATEGORIES: ExpenseCategory[] = [
 ];
 const INCOME_CATEGORIES: ExpenseCategory[] = ["SALARY", "BUSINESS", "INVESTMENT", "GIFT", "OTHER"];
 
-function label(v: string) {
-  return v.charAt(0) + v.slice(1).toLowerCase();
-}
-
 function money(value: number, currency: string) {
   try {
     return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(value);
@@ -44,6 +41,7 @@ function money(value: number, currency: string) {
 }
 
 export function ExpensesScreen() {
+  const t = useT();
   const qc = useQueryClient();
   const [type, setType] = useState<ExpenseType>("EXPENSE");
   const [amount, setAmount] = useState("");
@@ -77,7 +75,7 @@ export function ExpensesScreen() {
   const insights = useMutation({
     mutationFn: () => expenseService.insights(),
     onSuccess: (r) => setInsight(r.analysis),
-    onError: (e) => setInsight(extractErrorMessage(e, "Could not generate insights")),
+    onError: (e) => setInsight(extractErrorMessage(e, t("expenses.couldNotInsights"))),
   });
 
   const setKind = (k: ExpenseType) => {
@@ -94,7 +92,7 @@ export function ExpensesScreen() {
     <KeyboardAware>
       <ScrollView style={styles.flex} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.currencyRow}>
-        <Text style={styles.currencyLabel}>Currency</Text>
+        <Text style={styles.currencyLabel}>{t("expenses.currency")}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {CURRENCIES.map((c) => (
             <Pressable
@@ -110,13 +108,13 @@ export function ExpensesScreen() {
 
       <View style={styles.summaryRow}>
         <Card style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Income</Text>
+          <Text style={styles.summaryLabel}>{t("home.income")}</Text>
           <Text style={[styles.summaryValue, { color: colors.income }]}>
             {money(summary.data?.totalIncome ?? 0, currency)}
           </Text>
         </Card>
         <Card style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Expense</Text>
+          <Text style={styles.summaryLabel}>{t("home.expense")}</Text>
           <Text style={[styles.summaryValue, { color: colors.expense }]}>
             {money(summary.data?.totalExpense ?? 0, currency)}
           </Text>
@@ -124,12 +122,12 @@ export function ExpensesScreen() {
       </View>
 
       <Card style={{ gap: spacing.md }}>
-        <Text style={styles.cardTitle}>Where it goes (this month)</Text>
+        <Text style={styles.cardTitle}>{t("expenses.whereItGoes")}</Text>
         {summary.data && summary.data.expenseByCategory.length > 0 ? (
           summary.data.expenseByCategory.map((c) => (
             <View key={c.category} style={{ gap: 4 }}>
               <View style={styles.breakRow}>
-                <Text style={styles.breakLabel}>{label(c.category)}</Text>
+                <Text style={styles.breakLabel}>{t(`category.${c.category}`)}</Text>
                 <Text style={styles.breakValue}>
                   {money(c.total, currency)} · {c.percentage}%
                 </Text>
@@ -140,24 +138,24 @@ export function ExpensesScreen() {
             </View>
           ))
         ) : (
-          <Text style={styles.muted}>No expenses logged this month yet.</Text>
+          <Text style={styles.muted}>{t("expenses.noExpenses")}</Text>
         )}
       </Card>
 
       <Card style={{ gap: spacing.md }}>
-        <Text style={styles.cardTitle}>Add transaction</Text>
+        <Text style={styles.cardTitle}>{t("expenses.addTransaction")}</Text>
         <View style={styles.toggle}>
           <Pressable
             style={[styles.toggleBtn, type === "EXPENSE" && { backgroundColor: colors.expense }]}
             onPress={() => setKind("EXPENSE")}
           >
-            <Text style={[styles.toggleText, type === "EXPENSE" && styles.toggleTextActive]}>Expense</Text>
+            <Text style={[styles.toggleText, type === "EXPENSE" && styles.toggleTextActive]}>{t("home.expense")}</Text>
           </Pressable>
           <Pressable
             style={[styles.toggleBtn, type === "INCOME" && { backgroundColor: colors.income }]}
             onPress={() => setKind("INCOME")}
           >
-            <Text style={[styles.toggleText, type === "INCOME" && styles.toggleTextActive]}>Income</Text>
+            <Text style={[styles.toggleText, type === "INCOME" && styles.toggleTextActive]}>{t("home.income")}</Text>
           </Pressable>
         </View>
 
@@ -166,7 +164,7 @@ export function ExpensesScreen() {
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
-          placeholder="Amount"
+          placeholder={t("expenses.amount")}
           placeholderTextColor={colors.muted}
         />
 
@@ -177,7 +175,7 @@ export function ExpensesScreen() {
               style={[styles.chip, category === c && styles.chipActive]}
               onPress={() => setCategory(c)}
             >
-              <Text style={[styles.chipText, category === c && styles.chipTextActive]}>{label(c)}</Text>
+              <Text style={[styles.chipText, category === c && styles.chipTextActive]}>{t(`category.${c}`)}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -186,14 +184,14 @@ export function ExpensesScreen() {
           style={styles.input}
           value={note}
           onChangeText={setNote}
-          placeholder="Note (optional)"
+          placeholder={t("expenses.note")}
           placeholderTextColor={colors.muted}
         />
-        <Button title="Add" onPress={submit} loading={create.isPending} disabled={!Number(amount)} />
+        <Button title={t("expenses.add")} onPress={submit} loading={create.isPending} disabled={!Number(amount)} />
       </Card>
 
       <Button
-        title="Get AI spending insights"
+        title={t("expenses.getInsights")}
         variant="secondary"
         onPress={() => insights.mutate()}
         loading={insights.isPending}
@@ -202,7 +200,7 @@ export function ExpensesScreen() {
         <Card style={{ gap: spacing.sm, borderColor: colors.primary }}>
           <View style={styles.breakRow}>
             <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
-            <Text style={styles.cardTitle}> Spending insights</Text>
+            <Text style={styles.cardTitle}> {t("expenses.insights")}</Text>
           </View>
           <Text style={styles.insightText}>{insight}</Text>
         </Card>

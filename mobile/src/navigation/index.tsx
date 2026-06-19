@@ -1,14 +1,12 @@
 import React from "react";
-import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme";
 import { useAuthStore } from "../store/authStore";
+import { useT, type TranslationKey } from "../i18n";
 
-import { LoginScreen } from "../screens/LoginScreen";
-import { RegisterScreen } from "../screens/RegisterScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { AssistantScreen } from "../screens/AssistantScreen";
 import { TasksScreen } from "../screens/TasksScreen";
@@ -16,10 +14,9 @@ import { ExpensesScreen } from "../screens/ExpensesScreen";
 import { MoreScreen } from "../screens/MoreScreen";
 import { DocumentsScreen } from "../screens/DocumentsScreen";
 import { RemindersScreen } from "../screens/RemindersScreen";
+import { BootstrapScreen } from "../screens/BootstrapScreen";
 
 export type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
   Tabs: undefined;
   Documents: undefined;
   Reminders: undefined;
@@ -44,7 +41,16 @@ const TAB_ICONS: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = {
   More: "ellipsis-horizontal",
 };
 
+const TAB_LABELS: Record<keyof TabParamList, TranslationKey> = {
+  Home: "nav.home",
+  Assistant: "nav.assistant",
+  Tasks: "nav.tasks",
+  Expenses: "nav.expenses",
+  More: "nav.more",
+};
+
 function Tabs() {
+  const t = useT();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -52,6 +58,7 @@ function Tabs() {
         headerTitleStyle: { color: colors.text },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
+        title: t(TAB_LABELS[route.name]),
         tabBarIcon: ({ color, size }) => (
           <Ionicons name={TAB_ICONS[route.name]} size={size} color={color} />
         ),
@@ -67,32 +74,34 @@ function Tabs() {
 }
 
 export function RootNavigator() {
-  const hydrated = useAuthStore((s) => s.hydrated);
+  const t = useT();
   const accessToken = useAuthStore((s) => s.accessToken);
 
-  if (!hydrated) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
+  // No login UI: until a per-device session exists, show the bootstrap screen
+  // (loading / retry). Once a token is present, the main app is shown.
+  if (!accessToken) {
+    return <BootstrapScreen />;
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.card }, headerTitleStyle: { color: colors.text } }}>
-        {accessToken ? (
-          <>
-            <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-            <Stack.Screen name="Documents" component={DocumentsScreen} options={{ title: "Documents" }} />
-            <Stack.Screen name="Reminders" component={RemindersScreen} options={{ title: "Reminders" }} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Register" component={RegisterScreen} options={{ title: "Create account" }} />
-          </>
-        )}
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.card },
+          headerTitleStyle: { color: colors.text },
+        }}
+      >
+        <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="Documents"
+          component={DocumentsScreen}
+          options={{ title: t("nav.documents") }}
+        />
+        <Stack.Screen
+          name="Reminders"
+          component={RemindersScreen}
+          options={{ title: t("nav.reminders") }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

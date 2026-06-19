@@ -16,6 +16,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { Badge, Button, Card, EmptyState, KeyboardAware } from "../components/ui";
 import { documentService, type UploadFile } from "../services/documents";
 import { extractErrorMessage } from "../services/api";
+import { useT } from "../i18n";
 import { colors, radius, spacing } from "../theme";
 import type { AskResponse } from "../types";
 
@@ -37,6 +38,7 @@ function decodeText(value: string): string {
 }
 
 export function DocumentsScreen() {
+  const t = useT();
   const qc = useQueryClient();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<AskResponse | null>(null);
@@ -46,7 +48,7 @@ export function DocumentsScreen() {
   const upload = useMutation({
     mutationFn: (file: UploadFile) => documentService.upload(file),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }),
-    onError: (e) => Alert.alert("Upload failed", extractErrorMessage(e)),
+    onError: (e) => Alert.alert(t("documents.uploadFailed"), extractErrorMessage(e)),
   });
 
   const remove = useMutation({
@@ -57,13 +59,13 @@ export function DocumentsScreen() {
   const ask = useMutation({
     mutationFn: (q: string) => documentService.ask(q),
     onSuccess: setAnswer,
-    onError: (e) => Alert.alert("Could not answer", extractErrorMessage(e)),
+    onError: (e) => Alert.alert(t("documents.couldNotAnswer"), extractErrorMessage(e)),
   });
 
   const takePhoto = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Camera permission needed", "Enable camera access to scan documents.");
+      Alert.alert(t("documents.cameraPermTitle"), t("documents.cameraPermBody"));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
@@ -105,20 +107,20 @@ export function DocumentsScreen() {
       ListHeaderComponent={
         <View style={{ gap: spacing.lg }}>
           <View style={styles.actions}>
-            <Button title="Scan (camera)" onPress={takePhoto} loading={upload.isPending} />
-            <Button title="Pick file" variant="secondary" onPress={pickFile} />
+            <Button title={t("documents.scan")} onPress={takePhoto} loading={upload.isPending} />
+            <Button title={t("documents.pickFile")} variant="secondary" onPress={pickFile} />
           </View>
 
           <Card style={{ gap: spacing.md }}>
-            <Text style={styles.cardTitle}>Ask your documents</Text>
+            <Text style={styles.cardTitle}>{t("documents.ask")}</Text>
             <TextInput
               style={styles.input}
               value={question}
               onChangeText={setQuestion}
-              placeholder="When does my insurance expire?"
+              placeholder={t("documents.askPlaceholder")}
               placeholderTextColor={colors.muted}
             />
-            <Button title="Ask" onPress={submitAsk} loading={ask.isPending} disabled={!question.trim()} />
+            <Button title={t("documents.askBtn")} onPress={submitAsk} loading={ask.isPending} disabled={!question.trim()} />
             {answer ? (
               <View style={styles.answer}>
                 <Text style={styles.answerText}>{decodeText(answer.answer)}</Text>
@@ -133,14 +135,14 @@ export function DocumentsScreen() {
             ) : null}
           </Card>
 
-          <Text style={styles.cardTitle}>Your documents</Text>
+          <Text style={styles.cardTitle}>{t("documents.yourDocuments")}</Text>
         </View>
       }
       ListEmptyComponent={
         docs.isLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
         ) : (
-          <EmptyState title="No documents yet. Scan or upload your first file." />
+          <EmptyState title={t("documents.empty")} />
         )
       }
       renderItem={({ item }) => (

@@ -11,6 +11,7 @@ import { expenseService } from "../services/expenses";
 import { useAuthStore } from "../store/authStore";
 import { ensureNotificationPermission } from "../native/notifications";
 import { useCurrency } from "../store/currencyStore";
+import { useT, type TranslationKey } from "../i18n";
 import { colors, radius, spacing } from "../theme";
 import type { RootStackParamList, TabParamList } from "../navigation";
 
@@ -28,6 +29,7 @@ function money(value: number, currency: string) {
 }
 
 export function HomeScreen({ navigation }: Props) {
+  const t = useT();
   const storedUser = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const { currency } = useCurrency();
@@ -53,45 +55,42 @@ export function HomeScreen({ navigation }: Props) {
     const ok = await ensureNotificationPermission();
     setNotifyEnabled(ok);
     if (!ok) {
-      Alert.alert(
-        "Notifications are off",
-        "Allow notifications for LifeOS AI in your device Settings so your reminders can alert you on time.",
-      );
+      Alert.alert(t("home.notifOffTitle"), t("home.notifOffBody"));
     }
   };
 
-  const firstName = profile.data?.name?.split(" ")[0] ?? "there";
+  const firstName = profile.data?.name?.split(" ")[0] ?? "";
 
-  const shortcuts: { label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }[] = [
-    { label: "Assistant", icon: "sparkles-outline", onPress: () => navigation.navigate("Assistant") },
-    { label: "Tasks", icon: "checkbox-outline", onPress: () => navigation.navigate("Tasks") },
-    { label: "Expenses", icon: "wallet-outline", onPress: () => navigation.navigate("Expenses") },
-    { label: "Documents", icon: "document-text-outline", onPress: () => navigation.navigate("Documents") },
-    { label: "Reminders", icon: "notifications-outline", onPress: () => navigation.navigate("Reminders") },
+  const shortcuts: { key: TranslationKey; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }[] = [
+    { key: "nav.assistant", icon: "sparkles-outline", onPress: () => navigation.navigate("Assistant") },
+    { key: "nav.tasks", icon: "checkbox-outline", onPress: () => navigation.navigate("Tasks") },
+    { key: "nav.expenses", icon: "wallet-outline", onPress: () => navigation.navigate("Expenses") },
+    { key: "nav.documents", icon: "document-text-outline", onPress: () => navigation.navigate("Documents") },
+    { key: "nav.reminders", icon: "notifications-outline", onPress: () => navigation.navigate("Reminders") },
   ];
 
   return (
     <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
-      <Text style={styles.greeting}>Hi {firstName}</Text>
-      <Text style={styles.subtitle}>Welcome back to your AI workspace.</Text>
+      <Text style={styles.greeting}>{t("home.greeting", { name: firstName }).trim()}</Text>
+      <Text style={styles.subtitle}>{t("home.welcome")}</Text>
 
       <Card style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>This month</Text>
+        <Text style={styles.balanceLabel}>{t("home.thisMonth")}</Text>
         <View style={styles.balanceRow}>
           <View>
-            <Text style={styles.miniLabel}>Income</Text>
+            <Text style={styles.miniLabel}>{t("home.income")}</Text>
             <Text style={[styles.miniValue, { color: colors.income }]}>
               {money(summary.data?.totalIncome ?? 0, currency)}
             </Text>
           </View>
           <View>
-            <Text style={styles.miniLabel}>Expense</Text>
+            <Text style={styles.miniLabel}>{t("home.expense")}</Text>
             <Text style={[styles.miniValue, { color: colors.expense }]}>
               {money(summary.data?.totalExpense ?? 0, currency)}
             </Text>
           </View>
           <View>
-            <Text style={styles.miniLabel}>Net</Text>
+            <Text style={styles.miniLabel}>{t("home.net")}</Text>
             <Text style={styles.miniValue}>
               {money(summary.data?.net ?? 0, currency)}
             </Text>
@@ -99,12 +98,12 @@ export function HomeScreen({ navigation }: Props) {
         </View>
       </Card>
 
-      <Text style={styles.sectionTitle}>Quick access</Text>
+      <Text style={styles.sectionTitle}>{t("home.quickAccess")}</Text>
       <View style={styles.grid}>
         {shortcuts.map((s) => (
-          <TouchableOpacity key={s.label} style={styles.shortcut} onPress={s.onPress}>
+          <TouchableOpacity key={s.key} style={styles.shortcut} onPress={s.onPress}>
             <Ionicons name={s.icon} size={26} color={colors.primary} />
-            <Text style={styles.shortcutText}>{s.label}</Text>
+            <Text style={styles.shortcutText}>{t(s.key)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -116,19 +115,15 @@ export function HomeScreen({ navigation }: Props) {
             size={20}
             color={notifyEnabled ? colors.success : colors.primary}
           />
-          <Text style={styles.pushTitle}>Notifications</Text>
+          <Text style={styles.pushTitle}>{t("home.notifications")}</Text>
         </View>
         <Text style={styles.pushStatus}>
-          {notifyEnabled
-            ? "Enabled — your reminders will alert you on this device."
-            : "Turn on notifications so your reminders can alert you on time."}
+          {notifyEnabled ? t("home.notifEnabled") : t("home.notifDisabled")}
         </Text>
         {notifyEnabled === false ? (
-          <Button title="Enable notifications" onPress={enableNotifications} />
+          <Button title={t("home.enableNotifications")} onPress={enableNotifications} />
         ) : null}
       </Card>
-
-      <Button title="Log out" variant="secondary" onPress={() => useAuthStore.getState().clear()} />
     </ScrollView>
   );
 }

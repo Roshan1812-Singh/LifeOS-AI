@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootNavigator } from "./src/navigation";
 import { useAuthStore } from "./src/store/authStore";
 import { useCurrencyStore } from "./src/store/currencyStore";
+import { useI18nStore } from "./src/i18n";
 import { warmUpBackend } from "./src/services/api";
 
 const queryClient = new QueryClient({
@@ -14,16 +15,18 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  const hydrate = useAuthStore((s) => s.hydrate);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
   const hydrateCurrency = useCurrencyStore((s) => s.hydrate);
+  const hydrateLanguage = useI18nStore((s) => s.hydrate);
 
   useEffect(() => {
-    hydrate();
-    hydrateCurrency();
-    // Wake the free-tier backend right away so it's warm by the time the user
-    // signs in (avoids the first-request cold-start "Network error").
+    // Wake the free-tier backend first so the silent device sign-in below
+    // doesn't hit a cold-start timeout, then establish the session.
     warmUpBackend();
-  }, [hydrate, hydrateCurrency]);
+    hydrateCurrency();
+    hydrateLanguage();
+    bootstrap();
+  }, [bootstrap, hydrateCurrency, hydrateLanguage]);
 
   return (
     <SafeAreaProvider>

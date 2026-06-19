@@ -17,17 +17,19 @@ import { Button, Card, EmptyState, KeyboardAware } from "../components/ui";
 import { reminderService, type ReminderPayload } from "../services/reminders";
 import { extractErrorMessage } from "../services/api";
 import { cancelReminderNotification, scheduleReminderNotification } from "../native/notifications";
+import { useT, type TranslationKey } from "../i18n";
 import type { Reminder } from "../types";
 import { colors, radius, spacing } from "../theme";
 
-type Offset = { label: string; ms: number };
+type Offset = { key: TranslationKey; ms: number };
 const OFFSETS: Offset[] = [
-  { label: "In 1 min", ms: 60_000 },
-  { label: "In 1 hour", ms: 3_600_000 },
-  { label: "Tomorrow", ms: 86_400_000 },
+  { key: "reminders.in1min", ms: 60_000 },
+  { key: "reminders.in1hour", ms: 3_600_000 },
+  { key: "reminders.tomorrow", ms: 86_400_000 },
 ];
 
 export function RemindersScreen() {
+  const t = useT();
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [offset, setOffset] = useState<Offset>(OFFSETS[1]);
@@ -56,13 +58,13 @@ export function RemindersScreen() {
       await reminderService.create(payload);
       return { remindAt, title: payload.title };
     },
-    onSuccess: async ({ remindAt, title: t }) => {
-      await scheduleReminderNotification("Reminder", t, remindAt);
+    onSuccess: async ({ remindAt, title: body }) => {
+      await scheduleReminderNotification(t("reminders.label"), body, remindAt);
       setTitle("");
       setAttachLocation(false);
       qc.invalidateQueries({ queryKey: ["reminders"] });
     },
-    onError: (e) => Alert.alert("Could not create reminder", extractErrorMessage(e)),
+    onError: (e) => Alert.alert(t("reminders.couldNotCreate"), extractErrorMessage(e)),
   });
 
   // Removing a reminder must also cancel its pending device notification, so a
@@ -73,7 +75,7 @@ export function RemindersScreen() {
       await cancelReminderNotification(item.title, new Date(item.remindAt));
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["reminders"] }),
-    onError: (e) => Alert.alert("Could not remove reminder", extractErrorMessage(e)),
+    onError: (e) => Alert.alert(t("reminders.couldNotRemove"), extractErrorMessage(e)),
   });
 
   return (
@@ -86,23 +88,23 @@ export function RemindersScreen() {
         contentContainerStyle={styles.container}
       ListHeaderComponent={
         <Card style={{ gap: spacing.md, marginBottom: spacing.lg }}>
-          <Text style={styles.cardTitle}>New reminder</Text>
+          <Text style={styles.cardTitle}>{t("reminders.new")}</Text>
           <TextInput
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder="What should I remind you about?"
+            placeholder={t("reminders.placeholder")}
             placeholderTextColor={colors.muted}
           />
           <View style={styles.offsets}>
             {OFFSETS.map((o) => (
               <Pressable
-                key={o.label}
-                style={[styles.offset, offset.label === o.label && styles.offsetActive]}
+                key={o.key}
+                style={[styles.offset, offset.key === o.key && styles.offsetActive]}
                 onPress={() => setOffset(o)}
               >
-                <Text style={[styles.offsetText, offset.label === o.label && styles.offsetTextActive]}>
-                  {o.label}
+                <Text style={[styles.offsetText, offset.key === o.key && styles.offsetTextActive]}>
+                  {t(o.key)}
                 </Text>
               </Pressable>
             ))}
@@ -110,12 +112,12 @@ export function RemindersScreen() {
           <View style={styles.locationRow}>
             <View style={styles.locationLabel}>
               <Ionicons name="location-outline" size={18} color={colors.muted} />
-              <Text style={styles.muted}>Attach current location</Text>
+              <Text style={styles.muted}>{t("reminders.attachLocation")}</Text>
             </View>
             <Switch value={attachLocation} onValueChange={setAttachLocation} />
           </View>
           <Button
-            title="Create reminder"
+            title={t("reminders.create")}
             onPress={() => create.mutate()}
             loading={create.isPending}
             disabled={!title.trim()}
@@ -126,7 +128,7 @@ export function RemindersScreen() {
         reminders.isLoading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
-          <EmptyState title="No active reminders." />
+          <EmptyState title={t("reminders.empty")} />
         )
       }
       renderItem={({ item }) => (

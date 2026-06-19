@@ -15,10 +15,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { aiService } from "../services/ai";
 import { extractErrorMessage } from "../services/api";
 import { speak, stopSpeaking } from "../native/speech";
+import { useT } from "../i18n";
 import { colors, radius, spacing } from "../theme";
 import type { ChatMessage } from "../types";
 
 export function AssistantScreen() {
+  const t = useT();
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function AssistantScreen() {
         speak(turn.assistantMessage.content);
       }
     },
-    onError: (e) => setError(extractErrorMessage(e, "The assistant could not reply")),
+    onError: (e) => setError(extractErrorMessage(e, t("assistant.error"))),
   });
 
   const handleSend = () => {
@@ -87,7 +89,7 @@ export function AssistantScreen() {
       keyboardVerticalOffset={90}
     >
       <View style={styles.toolbar}>
-        <Text style={styles.toolbarText}>AI Assistant</Text>
+        <Text style={styles.toolbarText}>{t("assistant.title")}</Text>
         <Pressable onPress={toggleSpeak} style={styles.speakBtn}>
           <Ionicons
             name={speakReplies ? "volume-high" : "volume-mute-outline"}
@@ -95,7 +97,7 @@ export function AssistantScreen() {
             color={speakReplies ? colors.primary : colors.muted}
           />
           <Text style={[styles.speakLabel, { color: speakReplies ? colors.primary : colors.muted }]}>
-            Speak replies
+            {t("assistant.speakReplies")}
           </Text>
         </Pressable>
       </View>
@@ -111,11 +113,7 @@ export function AssistantScreen() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.messages}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-          ListEmptyComponent={
-            <Text style={styles.hint}>
-              Ask me to plan your day, summarize notes, or answer questions.
-            </Text>
-          }
+          ListEmptyComponent={<Text style={styles.hint}>{t("assistant.hint")}</Text>}
           renderItem={({ item }) => {
             const mine = item.role === "USER";
             return (
@@ -136,7 +134,7 @@ export function AssistantScreen() {
           style={styles.input}
           value={text}
           onChangeText={setText}
-          placeholder="Message the assistant..."
+          placeholder={t("assistant.placeholder")}
           placeholderTextColor={colors.muted}
           multiline
         />
